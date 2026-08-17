@@ -69,7 +69,7 @@ build/dist/com.gleb.autotranslate.zip
 docker compose up -d --build
 ```
 
-Контейнер собирает Auto Translate, формирует `index.json`, собирает официальный Revenge Next bundle и отдаёт файлы локально на `127.0.0.1:8083`. Системный Nginx принимает Cloudflare-трафик на `8443`; Xray продолжает занимать `443`.
+Контейнер собирает Auto Translate, формирует `index.json`, собирает официальный Revenge Next bundle и отдаёт файлы локально на `127.0.0.1:8083`. Системный Nginx принимает Cloudflare-трафик на `9443`; Xray продолжает занимать `443`, а MTProto — `8443`.
 
 ## Структура
 

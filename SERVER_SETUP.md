@@ -3,11 +3,11 @@
 Рабочая цепочка:
 
 ```text
-телефон → Cloudflare HTTPS:443 → Origin Rule → сервер HTTPS:8443
+телефон → Cloudflare HTTPS:443 → Origin Rule → сервер HTTPS:9443
        → системный Nginx → 127.0.0.1:8083 → Docker repository:80
 ```
 
-Xray продолжает слушать серверный `443`. Cloudflare Zero Trust и `cloudflared` не используются.
+Xray продолжает слушать серверный `443`, а MTProto — `8443`. Cloudflare Zero Trust и `cloudflared` не используются.
 
 ## 1. Настройки Cloudflare
 
@@ -19,7 +19,7 @@ Xray продолжает слушать серверный `443`. Cloudflare Ze
 
    ```text
    Condition:        (http.host eq "repo.gpodvorotov.ru")
-   Destination Port: Rewrite to 8443
+   Destination Port: Rewrite to 9443
    ```
 
 Origin CA certificate для `repo.gpodvorotov.ru` и его приватный ключ должны находиться только на сервере:
@@ -138,15 +138,15 @@ sudo ln -s /etc/nginx/sites-available/revenge-repository \
   /etc/nginx/sites-enabled/revenge-repository
 sudo nginx -t
 sudo systemctl reload nginx
-sudo ss -lntp | grep ':8443'
+sudo ss -lntp | grep ':9443'
 ```
 
 Если символьная ссылка уже существует, повторно создавать её не нужно.
 
-Откройте TCP-порт `8443` в firewall сервера и панели хостинга:
+Откройте TCP-порт `9443` в firewall сервера и панели хостинга:
 
 ```bash
-sudo ufw allow 8443/tcp
+sudo ufw allow 9443/tcp
 sudo ufw status
 ```
 
@@ -155,8 +155,8 @@ sudo ufw status
 На сервере:
 
 ```bash
-curl -kI --resolve repo.gpodvorotov.ru:8443:127.0.0.1 \
-  https://repo.gpodvorotov.ru:8443/index.json
+curl -kI --resolve repo.gpodvorotov.ru:9443:127.0.0.1 \
+  https://repo.gpodvorotov.ru:9443/index.json
 ```
 
 Ожидается `HTTP/1.1 200 OK`. Опция `-k` нужна только для локальной проверки Cloudflare Origin CA: этот certificate доверен Cloudflare, а не системному хранилищу сервера.
@@ -173,7 +173,7 @@ curl -I https://repo.gpodvorotov.ru/com.gleb.autotranslate.zip
 
 Типичные ошибки:
 
-- `521`: Nginx не слушает `8443` или порт закрыт firewall;
+- `521`: Nginx не слушает `9443` или порт закрыт firewall;
 - `522`: Cloudflare не может подключиться к IP сервера;
 - `525/526`: ошибка certificate/key или режим не `Full (strict)`;
 - `502`: Nginx не видит Docker на `127.0.0.1:8083`;

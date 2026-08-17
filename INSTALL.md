@@ -113,11 +113,13 @@ Plugins
 
 2. Нажмите значок шестерёнки — откроется экран **Revenge Plugins Advanced**.
 3. Найдите поле **Repository URL**.
-4. Вставьте:
+4. Вставьте URL корня репозитория — без `/index.json` в конце:
 
    ```text
-   https://repo.gpodvorotov.ru/index.json
+   https://repo.gpodvorotov.ru
    ```
+
+   Revenge самостоятельно добавляет `/index.json` при обновлении. Если вставить полный адрес файла, клиент ошибочно запросит `/index.json/index.json`.
 
 5. Нажмите **Add repository**.
 6. Убедитесь, что в списке появился репозиторий:
@@ -232,7 +234,7 @@ Discord установлен не через Revenge Manager либо модиф
 
 ### Репозиторий не добавляется
 
-- проверьте точность `https://repo.gpodvorotov.ru/index.json`;
+- в поле **Repository URL** должен быть корень `https://repo.gpodvorotov.ru` без `/index.json`;
 - временно отключите VPN, Private DNS или блокировщик рекламы;
 - проверьте URL в браузере;
 - перезапустите Discord.

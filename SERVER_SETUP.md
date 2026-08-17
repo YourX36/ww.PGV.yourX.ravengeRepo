@@ -211,10 +211,10 @@ https://repo.gpodvorotov.ru/revenge.bundle
 
 ```text
 Revenge → Plugins → шестерёнка → Repository URL
-https://repo.gpodvorotov.ru/index.json
+https://repo.gpodvorotov.ru
 ```
 
-Нажмите **Add repository**, откройте **Browse plugins**, установите **Auto Translate RU** и перезапустите Discord.
+Revenge сам добавляет `/index.json` к URL корня. Нажмите **Add repository**, откройте **Browse plugins**, установите **Auto Translate RU** и перезапустите Discord.
 
 ## 9. Обновления
 

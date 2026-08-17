@@ -36,6 +36,8 @@ Repository:   https://repo.gpodvorotov.ru/index.json
 Plugin ZIP:   https://repo.gpodvorotov.ru/com.gleb.autotranslate.zip
 ```
 
+В интерфейсе Revenge в поле **Repository URL** вводится корень `https://repo.gpodvorotov.ru` без `/index.json`: клиент добавляет имя индексного файла самостоятельно.
+
 ## Установка пользователем
 
 Полная инструкция установки с нуля находится в [INSTALL.md](INSTALL.md). Компьютер пользователю не нужен: Revenge Next загружается по постоянному HTTPS-адресу владельца репозитория. Отдельный запасной сценарий sideload ZIP описан в [INSTALL_FROM_FILE.md](INSTALL_FROM_FILE.md).

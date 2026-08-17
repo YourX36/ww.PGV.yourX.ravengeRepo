@@ -1,10 +1,37 @@
-# Развёртывание репозитория на сервере
+# Запуск репозитория на сервере
 
-Инструкция рассчитана на домен `gpodvorotov.ru`, поддомен `repo.gpodvorotov.ru` и сервер Linux. Порты `80` и `443` могут оставаться занятыми системным Nginx и Xray/VPN: публичный HTTPS-трафик пойдёт через Cloudflare Tunnel.
+Рабочая цепочка:
 
-## 1. Что переносить на сервер
+```text
+телефон → Cloudflare HTTPS:443 → Origin Rule → сервер HTTPS:8443
+       → системный Nginx → 127.0.0.1:8083 → Docker repository:80
+```
 
-Рекомендуемый способ — клонировать весь GitHub-репозиторий. В нём Docker использует следующие файлы:
+Xray продолжает слушать серверный `443`. Cloudflare Zero Trust и `cloudflared` не используются.
+
+## 1. Настройки Cloudflare
+
+Должны быть выполнены три условия:
+
+1. DNS-запись `A repo → IP_СЕРВЕРА` имеет статус **Proxied** (оранжевое облако).
+2. `SSL/TLS → Overview` установлен в **Full (strict)**.
+3. Origin Rule содержит:
+
+   ```text
+   Condition:        (http.host eq "repo.gpodvorotov.ru")
+   Destination Port: Rewrite to 8443
+   ```
+
+Origin CA certificate для `repo.gpodvorotov.ru` и его приватный ключ должны находиться только на сервере:
+
+```text
+/etc/nginx/ssl/gpodvorotov.ru.pem
+/etc/nginx/ssl/gpodvorotov.ru.key
+```
+
+## 2. Какие файлы нужны на сервере
+
+Удобнее клонировать весь репозиторий. Для Docker фактически нужны:
 
 ```text
 Dockerfile
@@ -19,176 +46,183 @@ repo.config.json
 types/
 plugins/auto-translate/
 docker/nginx.conf
+server/nginx/revenge-repository.conf
 ```
 
-Не переносите локальные `node_modules`, `.gradle`, `.idea`, `build`, `local.properties` и настоящий `.env`. Если Git пока недоступен, можно передать перечисленные файлы и каталоги через SFTP/SCP с сохранением структуры.
+Не переносите `node_modules`, `build`, `.gradle`, `.idea`, `local.properties`, `.env`, сертификат и приватный ключ через Git.
 
-## 2. Подготовка сервера
+## 3. Перенос проекта
 
-Установите Git, Docker Engine и Docker Compose plugin. Для Ubuntu/Debian после установки проверьте:
+Вариант с Git после слияния актуальной ветки в `main`:
 
 ```bash
-git --version
-docker --version
-docker compose version
+cd /opt
+sudo git clone https://github.com/YourX36/ww.PGV.yourX.ravengeRepo.git
+sudo chown -R "$USER":"$USER" /opt/ww.PGV.yourX.ravengeRepo
+cd /opt/ww.PGV.yourX.ravengeRepo
 ```
 
-Клонируйте репозиторий:
+При ручном переносе скопируйте перечисленные выше файлы в:
 
-```bash
-git clone https://github.com/YourX36/ww.PGV.yourX.ravengeRepo.git
-cd ww.PGV.yourX.ravengeRepo
+```text
+/opt/ww.PGV.yourX.ravengeRepo/
 ```
 
-Если файлы переносились вручную, просто перейдите в каталог с `compose.yaml`.
+с сохранением структуры каталогов.
 
-## 3. Что делать, пока DNS инициализируется
-
-Можно заранее выполнить всю серверную подготовку и создать Tunnel. До активации nameserver-ов публичный адрес может не открываться — это нормально. Не меняйте DNS повторно и дождитесь статуса **Active** в Cloudflare.
-
-Проверять делегирование можно командами:
+## 4. Конфигурация Docker
 
 ```bash
-dig NS gpodvorotov.ru +short
-dig repo.gpodvorotov.ru +short
-```
-
-Продолжайте настройку, когда первая команда покажет nameserver-ы Cloudflare. Распространение DNS иногда занимает до 24–48 часов.
-
-## 4. Подключение домена к Cloudflare
-
-1. В Cloudflare нажмите **Add a domain** и добавьте `gpodvorotov.ru`.
-2. Cloudflare покажет два nameserver-а.
-3. В REG.RU откройте управление DNS/NS домена и замените текущие NS на выданные Cloudflare.
-4. Сохраните существующие DNS-записи, особенно используемые VPN. Записи VPN/Xray лучше оставить в режиме **DNS only** — серое облако.
-5. Дождитесь статуса домена **Active** в Cloudflare.
-
-Для Tunnel не нужно направлять входящий порт `443` на контейнер и не нужно останавливать Xray.
-
-## 5. Создание Cloudflare Tunnel
-
-1. Откройте **Cloudflare Zero Trust**.
-2. Перейдите в **Networks → Connectors → Cloudflare Tunnels**.
-3. Создайте remotely-managed tunnel с именем, например, `revenge-repository`.
-4. На шаге установки connector выберите Docker и скопируйте только длинный token после `--token`.
-5. Откройте tunnel → **Public Hostnames** → **Add a public hostname**.
-6. Укажите:
-
-   ```text
-   Subdomain: repo
-   Domain:    gpodvorotov.ru
-   Type:      HTTP
-   URL:       repository:80
-   ```
-
-7. Сохраните hostname. Cloudflare создаст связанную DNS-запись автоматически.
-
-`repository:80` — это имя Docker-сервиса во внутренней сети Compose, не порт хоста. Входящие `80/443` контейнер не публикует. При строгом исходящем firewall разрешите `cloudflared` соединения к Cloudflare на порту `7844`.
-
-## 6. Секретная конфигурация
-
-В каталоге проекта на сервере:
-
-```bash
+cd /opt/ww.PGV.yourX.ravengeRepo
 cp .env.example .env
+chmod 600 .env
 nano .env
 ```
 
-Содержимое должно выглядеть так:
+Содержимое:
 
 ```dotenv
 REPOSITORY_HOST=repo.gpodvorotov.ru
-CLOUDFLARE_TUNNEL_TOKEN=сюда_реальный_token_tunnel
 REVENGE_NEXT_REF=main
 ```
 
-Не отправляйте `.env` другим людям и не добавляйте его в Git. Права можно ограничить:
+Запуск:
 
 ```bash
-chmod 600 .env
-```
-
-## 7. Первый запуск
-
-```bash
+docker compose config
 docker compose up -d --build
 docker compose ps
+docker compose logs --tail=100 repository
 ```
 
-Первая сборка скачивает зависимости и официальный исходный код Revenge Next, поэтому может занять несколько минут.
+Первая сборка может занять несколько минут. В `docker compose ps` сервис должен стать `healthy`.
 
-Логи:
+Проверка Docker без Nginx и Cloudflare:
 
 ```bash
-docker compose logs --tail=200 repository
-docker compose logs --tail=200 cloudflared
+curl -I http://127.0.0.1:8083/index.json
+curl -I http://127.0.0.1:8083/revenge.bundle
+curl -I http://127.0.0.1:8083/com.gleb.autotranslate.zip
 ```
 
-После активации DNS проверьте:
+Все три запроса должны вернуть `HTTP/1.1 200 OK`.
+
+## 5. Установка конфигурации Nginx
+
+Скопируйте подготовленный конфиг:
 
 ```bash
-curl --fail https://repo.gpodvorotov.ru/index.json
-curl -I https://repo.gpodvorotov.ru/revenge.bundle
-curl -I https://repo.gpodvorotov.ru/com.gleb.autotranslate.zip
+sudo cp server/nginx/revenge-repository.conf \
+  /etc/nginx/sites-available/revenge-repository
 ```
 
-Все три адреса должны отвечать `HTTP 200`.
+Убедитесь, что пути к certificate и key совпадают с файлами на сервере:
 
-## 8. Выпуск обновления плагина
+```bash
+sudo ls -l /etc/nginx/ssl/gpodvorotov.ru.pem \
+  /etc/nginx/ssl/gpodvorotov.ru.key
+sudo chmod 600 /etc/nginx/ssl/gpodvorotov.ru.key
+```
 
-На компьютере разработчика:
+Проверьте, что certificate включает поддомен:
 
-1. Измените код.
-2. Увеличьте версию в `plugins/auto-translate/manifest.json`.
-3. Выполните:
+```bash
+sudo openssl x509 -in /etc/nginx/ssl/gpodvorotov.ru.pem \
+  -noout -subject -issuer -ext subjectAltName
+```
 
-   ```bash
-   bun run lint:types
-   bun run build auto-translate
-   ./gradlew packageAutoTranslate
-   ```
+Активируйте сайт:
 
-4. Закоммитьте и отправьте изменения на GitHub.
+```bash
+sudo ln -s /etc/nginx/sites-available/revenge-repository \
+  /etc/nginx/sites-enabled/revenge-repository
+sudo nginx -t
+sudo systemctl reload nginx
+sudo ss -lntp | grep ':8443'
+```
+
+Если символьная ссылка уже существует, повторно создавать её не нужно.
+
+Откройте TCP-порт `8443` в firewall сервера и панели хостинга:
+
+```bash
+sudo ufw allow 8443/tcp
+sudo ufw status
+```
+
+## 6. Проверка Nginx напрямую
 
 На сервере:
 
 ```bash
-cd ww.PGV.yourX.ravengeRepo
+curl -kI --resolve repo.gpodvorotov.ru:8443:127.0.0.1 \
+  https://repo.gpodvorotov.ru:8443/index.json
+```
+
+Ожидается `HTTP/1.1 200 OK`. Опция `-k` нужна только для локальной проверки Cloudflare Origin CA: этот certificate доверен Cloudflare, а не системному хранилищу сервера.
+
+## 7. Публичная проверка через Cloudflare
+
+```bash
+curl -I https://repo.gpodvorotov.ru/index.json
+curl -I https://repo.gpodvorotov.ru/revenge.bundle
+curl -I https://repo.gpodvorotov.ru/com.gleb.autotranslate.zip
+```
+
+Ожидается `HTTP 200`, а в заголовках обычно присутствует `server: cloudflare`.
+
+Типичные ошибки:
+
+- `521`: Nginx не слушает `8443` или порт закрыт firewall;
+- `522`: Cloudflare не может подключиться к IP сервера;
+- `525/526`: ошибка certificate/key или режим не `Full (strict)`;
+- `502`: Nginx не видит Docker на `127.0.0.1:8083`;
+- `404`: запрошен неправильный путь или контейнер собран некорректно.
+
+## 8. Проверка с телефона
+
+Отключите Wi-Fi, чтобы проверить внешний доступ через мобильную сеть, и откройте в браузере:
+
+```text
+https://repo.gpodvorotov.ru/index.json
+```
+
+Должен открыться или скачаться JSON без предупреждения о certificate. Затем проверьте:
+
+```text
+https://repo.gpodvorotov.ru/revenge.bundle
+https://repo.gpodvorotov.ru/com.gleb.autotranslate.zip
+```
+
+Переход на Revenge Next:
+
+```text
+Discord → Settings → Revenge → Developer Settings
+→ Developer → Load from custom URL
+```
+
+Вставьте:
+
+```text
+https://repo.gpodvorotov.ru/revenge.bundle
+```
+
+Полностью перезапустите Discord. Затем добавьте репозиторий:
+
+```text
+Revenge → Plugins → шестерёнка → Repository URL
+https://repo.gpodvorotov.ru/index.json
+```
+
+Нажмите **Add repository**, откройте **Browse plugins**, установите **Auto Translate RU** и перезапустите Discord.
+
+## 9. Обновления
+
+После изменения кода увеличьте версию в `plugins/auto-translate/manifest.json`, отправьте изменения в Git, затем на сервере выполните:
+
+```bash
+cd /opt/ww.PGV.yourX.ravengeRepo
 git pull --ff-only
 docker compose up -d --build
 docker compose ps
-curl --fail https://repo.gpodvorotov.ru/index.json
 ```
-
-Контейнер заменяется только после успешной сборки. Пользователи, подключившие `index.json`, увидят новую версию при проверке обновлений.
-
-## 9. Обновление Revenge Next bundle
-
-При `REVENGE_NEXT_REF=main` каждая новая Docker-сборка получает актуальный commit официальной ветки `main`.
-
-```bash
-docker compose build --no-cache repository
-docker compose up -d
-```
-
-Для воспроизводимой сборки вместо `main` можно указать полный commit SHA в `.env`.
-
-## 10. Диагностика
-
-Проверка контейнеров и tunnel:
-
-```bash
-docker compose ps
-docker compose logs --tail=200 cloudflared
-docker compose logs --tail=200 repository
-```
-
-Если `repository` healthy, но сайт не открывается:
-
-- проверьте, что домен в Cloudflare имеет статус **Active**;
-- проверьте Public Hostname и адрес `http://repository:80`;
-- проверьте token в `.env`;
-- убедитесь, что сервер имеет исходящий интернет-доступ;
-- дождитесь завершения распространения DNS.
-
-После замены или удаления tunnel старый token следует считать недействительным и заменить в `.env`.

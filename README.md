@@ -38,7 +38,7 @@ Plugin ZIP:   https://repo.gpodvorotov.ru/com.gleb.autotranslate.zip
 
 ## Установка пользователем
 
-Подробная инструкция для установки с телефона находится в [INSTALL_FROM_FILE.md](INSTALL_FROM_FILE.md). Компьютер пользователю не нужен: Revenge Next загружается по постоянному HTTPS-адресу владельца репозитория.
+Полная инструкция установки с нуля находится в [INSTALL.md](INSTALL.md). Компьютер пользователю не нужен: Revenge Next загружается по постоянному HTTPS-адресу владельца репозитория. Отдельный запасной сценарий sideload ZIP описан в [INSTALL_FROM_FILE.md](INSTALL_FROM_FILE.md).
 
 ## Локальная разработка
 
@@ -82,6 +82,7 @@ compose.yaml              Docker-сервис repository
 server/nginx/             конфигурация системного Nginx
 SERVER_SETUP.md           инструкция владельцу сервера
 INSTALL_FROM_FILE.md      инструкция пользователю
+INSTALL.md                полная установка Manager, Next и плагина
 ```
 
 ## Безопасность

@@ -1,0 +1,11 @@
+services:
+  repository:
+    build:
+      context: .
+      args:
+        REPOSITORY_BASE_URL: https://${REPOSITORY_HOST}
+        REVENGE_NEXT_REF: ${REVENGE_NEXT_REF:-main}
+    image: yourx/revenge-repository:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8083:80"

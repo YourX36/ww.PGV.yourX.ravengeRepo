@@ -1,0 +1,19 @@
+{
+	"format": 1,
+	"id": "com.gleb.autotranslate",
+	"name": "Auto Translate RU",
+	"description": "Automatically translates Discord messages to Russian inside Revenge.",
+	"author": "Gleb",
+	"version": "0.2.1",
+	"dependencies": {
+		"revenge.api": {
+			"version": ">=1 <2"
+		},
+		"discord": {
+			"version": "*"
+		}
+	},
+	"dist": {
+		"script": "index.js"
+	}
+}

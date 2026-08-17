@@ -1,0 +1,22 @@
+services:
+  repository:
+    build:
+      context: .
+      args:
+        REPOSITORY_BASE_URL: https://${REPOSITORY_HOST}
+        REVENGE_NEXT_REF: ${REVENGE_NEXT_REF:-main}
+    image: yourx/revenge-repository:latest
+    restart: unless-stopped
+    networks: [repository]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      repository:
+        condition: service_healthy
+    networks: [repository]
+
+networks:
+  repository:

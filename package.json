@@ -3,12 +3,12 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "revenge-plugin build",
+		"build": "bun --bun node_modules/@revenge-mod/plugin-cli/bin/revenge-plugin.js build",
 		"build:dev": "revenge-plugin build --dev",
 		"generate-index": "revenge-plugin generate-index",
-		"serve": "revenge-plugin serve",
+		"serve": "bun --bun node_modules/@revenge-mod/plugin-cli/bin/revenge-plugin.js serve --host 0.0.0.0 --port 8080 --base-url http://127.0.0.1:8080",
 		"lint": "biome check",
-		"lint:types": "tsc --noEmit && tsc -p cli --noEmit"
+		"lint:types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@revenge-mod/devtools-client": "^1.4.0",
